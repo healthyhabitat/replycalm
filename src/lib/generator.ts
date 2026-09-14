@@ -107,9 +107,12 @@ export function extractIssues(message: string): ExtractedIssue[] {
     issues.push({ kind, label, detail: sentenceCase(detail) });
   };
 
+  const deadlineHits = allMatches(DEADLINE_RE, text, 2);
+  const dateHits = allMatches(DATE_RE, text, 2);
+  // Prefer crisp date tokens; avoid long spans that swallow money clauses
   const deadlines = [
-    ...allMatches(DEADLINE_RE, text),
-    ...allMatches(DATE_RE, text),
+    ...dateHits,
+    ...deadlineHits.filter((d) => !/invoice|payment|\$/i.test(d)),
   ];
   for (const d of deadlines.slice(0, 2)) {
     add("deadline", "Deadline / timing", d);
@@ -238,8 +241,14 @@ function addressBlock(
 ): string {
   const lines: string[] = [];
   const kinds = new Set(issues.map((i) => i.kind));
+  const handledKind = new Set<IssueKind>();
 
-  for (const issue of issues.slice(0, 4)) {
+  for (const issue of issues.slice(0, 5)) {
+    // One concrete line per kind keeps replies tight (esp. multiple date hits)
+    if (handledKind.has(issue.kind) && issue.kind !== "question" && issue.kind !== "request") {
+      continue;
+    }
+    handledKind.add(issue.kind);
     switch (issue.kind) {
       case "deadline":
         if (goal === "delay") {
@@ -433,11 +442,19 @@ function buildBody(
     return `${g}\n\n${ack}\n\n${mid}\n\n${close}\n\n${sign}`;
   }
 
-  // warm
-  const warmAck = ack.replace(
-    /^Thanks/,
-    pick(["Really appreciate you sending this", "Thanks so much for writing", "Grateful you flagged this"], seed, 40)
-  );
+  // warm — full acknowledge line (don't string-replace mid-sentence)
+  const top = issues[0];
+  const warmAcks = top
+    ? [
+        `Really appreciate you sending this — I see the concern around ${clip(top.detail, 55).toLowerCase()}.`,
+        `Thanks so much for writing about ${clip(top.detail, 55).toLowerCase()}.`,
+        `Grateful you flagged ${clip(top.detail, 55).toLowerCase()}. I've got it.`,
+      ]
+    : [
+        "Really appreciate you sending this — I read it carefully.",
+        "Thanks so much for writing. I've got it.",
+      ];
+  const warmAck = pick(warmAcks, seed, 40);
   return `${g}\n\n${warmAck}\n\n${mid}\n\n${close}\n\n${sign}`;
 }
 

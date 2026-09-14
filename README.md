@@ -2,7 +2,7 @@
 
 **Paste a rough, angry, awkward, or high-stakes email → get 3 professional reply options (firm / warm / brief) plus subject lines and a “don’t say this” note.**
 
-- **Live:** https://replycalm.vercel.app *(update after first deploy)*
+- **Live:** https://replycalm.vercel.app
 - **Repo:** https://github.com/healthyhabitat/replycalm
 - **Stack:** Next.js App Router, TypeScript, Tailwind CSS, Stripe Checkout
 - **Monetization:** Free preview (1 reply). Full pack unlock = **$1**.
